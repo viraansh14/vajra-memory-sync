@@ -39,6 +39,11 @@ def _regenerate(root, machine, status_file, extra_checks=None):
     checks["completeness"] = st.completeness(root, entries, machine)
     checks["lint"] = ({"state": "PASS", "detail": "no disagreement"} if not problems
                       else {"state": "FAIL", "detail": "; ".join(problems)})
+    # audit walks EVERY directory; lint only sees what collect() returned.
+    misplaced = idx.audit(root, machine)
+    checks["placement"] = ({"state": "PASS", "detail": "all memories in the right dir"}
+                           if not misplaced
+                           else {"state": "FAIL", "detail": "; ".join(misplaced)[:400]})
     v = st.verdict(checks)
     if status_file:
         # A timestamp is not decoration: without it a reader cannot tell a fresh

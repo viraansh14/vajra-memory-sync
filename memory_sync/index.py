@@ -78,3 +78,35 @@ def lint(entries):
                     p=e["name"], d=e["dirname"], s=e["scope"])
             )
     return sorted(problems)
+
+
+OTHER = {"winpc": "macmini", "macmini": "winpc"}
+
+
+def audit(root, machine):
+    """Walk EVERY directory and flag misplaced memories.
+
+    lint() can only see what collect() returns, and collect() deliberately drops
+    files whose scope does not match the machine - so a peer-scoped memory
+    sitting in this machine's _local is invisible to it. That happened live on
+    2026-09-01 (5 winpc memories in the Mac's _local, silently unindexed).
+    This walks the tree directly instead.
+    """
+    peer = OTHER.get(machine)
+    expected = {"_shared": {"estate"}, "_local": {machine}, "_peer-local": {peer}}
+    problems = []
+    for d, allowed in expected.items():
+        base = Path(root) / d
+        if not base.is_dir():
+            continue
+        default = "estate" if d == "_shared" else (machine if d == "_local" else peer)
+        for f in sorted(base.glob("*.md")):
+            if f.name == "MEMORY.md":
+                continue
+            meta, _ = parse(f.read_text(encoding="utf-8"))
+            scope = scope_of(meta, default)
+            if scope not in allowed:
+                problems.append(
+                    "misplaced: {}/{} declares scope: {} but {} holds only {}".format(
+                        d, f.name, scope, d, "/".join(sorted(allowed))))
+    return sorted(problems)
