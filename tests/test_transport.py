@@ -101,3 +101,38 @@ def test_sync_repo_reports_unknown_when_every_remote_is_unreachable(tmp_path):
     res = sync_repo(a, ["dead", "alsodead"], "main")
     assert res["state"] != "PASS"
     assert res["state"] in ("UNKNOWN", "FAIL")
+
+
+def test_repo_state_flags_an_interrupted_rebase(tmp_path):
+    """A failed sync can strand the repo mid-rebase with a DETACHED HEAD, after
+    which every later sync fails for a reason that looks like a network fault.
+    Observed live 2026-09-01. It must be reported explicitly, not rediscovered
+    by hand."""
+    from memory_sync.transport import repo_state
+    a = _repo(tmp_path / "a", "a")
+    ok = repo_state(a)
+    assert ok["state"] == "PASS", ok
+    (a / ".git" / "rebase-merge").mkdir()
+    bad = repo_state(a)
+    assert bad["state"] == "FAIL"
+    assert "rebase" in bad["detail"].lower()
+
+
+def test_repo_state_flags_detached_head(tmp_path):
+    from memory_sync.transport import repo_state
+    a = _repo(tmp_path / "a", "a")
+    sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=a,
+                         capture_output=True, text=True).stdout.strip()
+    subprocess.run(["git", "checkout", "-q", sha], cwd=a, check=True)
+    bad = repo_state(a)
+    assert bad["state"] == "FAIL"
+    assert "detached" in bad["detail"].lower()
+
+
+def test_sync_repo_refuses_to_run_on_a_broken_repo(tmp_path):
+    from memory_sync.transport import sync_repo
+    a, b = _linked(tmp_path)
+    (a / ".git" / "rebase-merge").mkdir()
+    res = sync_repo(a, ["peer"], "main")
+    assert res["state"] == "FAIL"
+    assert "rebase" in res["detail"].lower()

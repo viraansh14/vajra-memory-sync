@@ -12,6 +12,7 @@ O2-minor  A non-fast-forward push must pull-rebase and retry IMMEDIATELY.
     Deferring to the 30-minute reconciler leaves a known divergence standing.
 """
 import subprocess
+from pathlib import Path
 
 DEFAULT_TIMEOUT = 45
 
@@ -91,6 +92,9 @@ def sync_repo(repo, candidates, branch, message="memory: sync"):
     candidates in order - mDNS, then raw IP, then the relay - and say which one
     actually carried the sync.
     """
+    guard = repo_state(repo)
+    if guard["state"] != "PASS":
+        return dict(guard, remote=None, tried=[])
     commit_all(repo, message)
     have = set(remotes_of(repo))
     tried = []
@@ -117,3 +121,26 @@ def sync_repo(repo, candidates, branch, message="memory: sync"):
     last["detail"] = "all remotes failed [{}]: {}".format(
         ", ".join(tried) or "none", last.get("detail", ""))[:400]
     return last
+
+
+def repo_state(repo):
+    """Refuse to sync a repo that is mid-rebase or on a detached HEAD.
+
+    A conflicted pull leaves exactly this state, and every subsequent sync then
+    fails with a message that looks like a transport fault ("non-fast-forward")
+    while the real cause is local and unrelated. Observed live 2026-09-01: the
+    branch ref and HEAD had silently diverged onto two equivalent histories.
+    """
+    g = Path(repo) / ".git"
+    for marker, label in (("rebase-merge", "rebase"), ("rebase-apply", "rebase"),
+                          ("MERGE_HEAD", "merge"), ("CHERRY_PICK_HEAD", "cherry-pick")):
+        if (g / marker).exists():
+            return {"state": "FAIL",
+                    "detail": "repo is mid-{}: resolve or abort it before syncing "
+                              "(.git/{} present)".format(label, marker)}
+    code, out = run(["symbolic-ref", "-q", "HEAD"], repo)
+    if code != 0:
+        return {"state": "FAIL",
+                "detail": "HEAD is DETACHED: the branch ref and HEAD have diverged; "
+                          "checkout the branch before syncing"}
+    return {"state": "PASS", "detail": "on {}".format(out.replace("refs/heads/", ""))}
