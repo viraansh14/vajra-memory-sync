@@ -1,0 +1,2 @@
+[console_scripts]
+memory-sync = memory_sync.cli:main

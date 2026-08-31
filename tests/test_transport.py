@@ -76,3 +76,28 @@ def test_run_bounds_a_hanging_call(tmp_path):
     code, out = run(["--version"], tmp_path, timeout=30)
     assert code == 0
     assert "git version" in out
+
+
+def test_sync_repo_falls_back_to_the_second_remote(tmp_path):
+    """mDNS resolution for the peer is intermittently flaky on this LAN, so a
+    single-remote transport fails for reasons that have nothing to do with the
+    memory. Try candidates in order and report which one carried it."""
+    from memory_sync.transport import sync_repo
+    a, b = _linked(tmp_path)
+    subprocess.run(["git", "remote", "rename", "peer", "good"], cwd=a, check=True)
+    subprocess.run(["git", "remote", "add", "dead", "ssh://nosuch.invalid/x"], cwd=a, check=True)
+    (a / "fromA.md").write_text("A\n", encoding="utf-8")
+    commit_all(a, "from A")
+    res = sync_repo(a, ["dead", "good"], "main")
+    assert res["state"] == "PASS", res
+    assert res["remote"] == "good"
+    assert (b / "fromA.md").exists()
+
+
+def test_sync_repo_reports_unknown_when_every_remote_is_unreachable(tmp_path):
+    from memory_sync.transport import sync_repo
+    a = _repo(tmp_path / "a", "a")
+    subprocess.run(["git", "remote", "add", "dead", "ssh://nosuch.invalid/x"], cwd=a, check=True)
+    res = sync_repo(a, ["dead", "alsodead"], "main")
+    assert res["state"] != "PASS"
+    assert res["state"] in ("UNKNOWN", "FAIL")

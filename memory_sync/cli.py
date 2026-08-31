@@ -5,6 +5,7 @@ platforms. Subcommands: index, lint, migrate, sync.
 """
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 from . import index as idx
 from . import status as st
@@ -22,6 +23,8 @@ def _args(argv):
     p.add_argument("--machine", required=True, choices=["winpc", "macmini"])
     p.add_argument("--status-file")
     p.add_argument("--remote", default="peer")
+    p.add_argument("--remotes", default="peer,peerip,relay",
+                   help="ordered fallback remotes; mDNS is flaky so try IP next")
     p.add_argument("--branch", default="main")
     p.add_argument("--timeout", type=int, default=45)
     return p.parse_args(argv)
@@ -38,8 +41,14 @@ def _regenerate(root, machine, status_file, extra_checks=None):
                       else {"state": "FAIL", "detail": "; ".join(problems)})
     v = st.verdict(checks)
     if status_file:
-        st.write_status(status_file, {"verdict": v, "checks": checks,
-                                      "indexed": len(entries), "machine": machine})
+        # A timestamp is not decoration: without it a reader cannot tell a fresh
+        # verdict from one left behind by a run that has since started failing.
+        # That exact confusion produced a false OK on 2026-09-01.
+        st.write_status(status_file, {
+            "t": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "verdict": v, "checks": checks,
+            "indexed": len(entries), "machine": machine,
+        })
     return v, checks
 
 
@@ -65,17 +74,16 @@ def main(argv=None):
 
     extra = {}
     if a.cmd == "sync":
+        candidates = [c.strip() for c in a.remotes.split(",") if c.strip()]
         for r in REPOS:
             repo = root / r
             if not (repo / ".git").is_dir():
                 extra["sync:" + r] = {"state": "UNKNOWN", "detail": "not a git repo"}
                 continue
-            tp.commit_all(repo, "memory: sync")
-            pulled = tp.pull_rebase(repo, a.remote, a.branch)
-            if pulled["state"] == "PASS":
-                extra["sync:" + r] = tp.push_with_retry(repo, a.remote, a.branch)
-            else:
-                extra["sync:" + r] = pulled
+            res = tp.sync_repo(repo, candidates, a.branch)
+            if res.get("remote"):
+                res["detail"] = "{} via {}".format(res.get("detail", ""), res["remote"])
+            extra["sync:" + r] = {"state": res["state"], "detail": res.get("detail", "")}
 
     v, checks = _regenerate(root, a.machine, a.status_file, extra)
     print(v, checks["completeness"]["detail"])

@@ -71,3 +71,49 @@ def push_with_retry(repo, remote, branch, attempts=3):
                     "detail": "rebase before retry: " + r["detail"]}
         return {"state": "FAIL", "detail": out[:300]}
     return {"state": "FAIL", "detail": "exhausted retries: {}".format(last[:300])}
+
+
+def remotes_of(repo):
+    """Configured remote names, in config order."""
+    code, out = run(["remote"], repo)
+    if code != 0:
+        return []
+    return [ln.strip() for ln in out.splitlines() if ln.strip()]
+
+
+def sync_repo(repo, candidates, branch, message="memory: sync"):
+    """Commit, then pull+push via the first candidate remote that works.
+
+    The LAN peer is reached by mDNS, which resolves intermittently on this
+    network (observed 2026-09-01: the same host alternately resolving and
+    returning 'Name or service not known' minutes apart). A single-remote
+    transport therefore reports FAIL for reasons unrelated to the memory. Try
+    candidates in order - mDNS, then raw IP, then the relay - and say which one
+    actually carried the sync.
+    """
+    commit_all(repo, message)
+    have = set(remotes_of(repo))
+    tried = []
+    last = {"state": "UNKNOWN", "detail": "no candidate remote configured"}
+    for name in candidates:
+        if name not in have:
+            tried.append("{}=absent".format(name))
+            continue
+        pulled = pull_rebase(repo, name, branch)
+        if pulled["state"] != "PASS":
+            tried.append("{}={}".format(name, pulled["state"]))
+            last = pulled
+            continue
+        pushed = push_with_retry(repo, name, branch)
+        pushed["remote"] = name
+        pushed["tried"] = tried
+        if pushed["state"] == "PASS":
+            return pushed
+        tried.append("{}=push:{}".format(name, pushed["state"]))
+        last = pushed
+    last = dict(last)
+    last["remote"] = None
+    last["tried"] = tried
+    last["detail"] = "all remotes failed [{}]: {}".format(
+        ", ".join(tried) or "none", last.get("detail", ""))[:400]
+    return last

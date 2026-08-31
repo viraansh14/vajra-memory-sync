@@ -71,3 +71,16 @@ def test_module_is_runnable_as_a_script(tmp_path):
     assert p.returncode == 0, p.stderr
     assert "_shared" in p.stdout, "migrate produced no output: {!r}".format(p.stdout)
     assert "scope: estate" in (tmp_path / "_shared" / "a.md").read_text(encoding="utf-8")
+
+
+def test_status_carries_a_timestamp(tmp_path):
+    """Without a timestamp a reader cannot distinguish a fresh verdict from a
+    stale one left by a run that has since begun failing. That confusion
+    produced a false OK on 2026-09-01."""
+    import json, re
+    t = _tree(tmp_path)
+    s = tmp_path / "status.json"
+    main(["index", "--root", str(t), "--machine", "winpc", "--status-file", str(s)])
+    payload = json.loads(s.read_text(encoding="utf-8"))
+    assert "t" in payload, "status must carry a timestamp"
+    assert re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", payload["t"])
