@@ -37,11 +37,22 @@ fight it.
 | `C--` | 7 | |
 | total | 240 | |
 
-**Transport, as found:** Syncthing runs on both. The Mac has the PC device
-(`4NVUDD3-…`) set to `paused: true`, which is the sole reason the link is down. The PC
-side is healthy: process up, `:22000` listening, discovery enabled. Mac-claude had
-diagnosed this as "the PC's Syncthing is offline", which is incorrect and is the blocker
-to unblock first.
+**Transport, as found (and since resolved):** Syncthing runs on both. The Mac had the PC
+device (`4NVUDD3-…`) set to `paused: true`, which was the sole reason the link was down —
+the PC side was healthy throughout (process up, `:22000` listening, discovery enabled).
+Mac-claude had diagnosed this as "the PC's Syncthing is offline", which was incorrect;
+each side was blaming the other while the cause was one pause flag. **Unpaused
+2026-09-01 ~02:20; link now `connected=True`.** This also unfroze the Obsidian vault and
+dotfiles folders, which had been stalled for the same reason.
+
+**Known transport defect:** the live Syncthing connection is
+`relay://64.235.45.16:443` — a *public Syncthing relay* — despite both machines sitting
+on `192.168.0.0/24` with the PC's LAN address statically configured, discovery succeeding
+and `localAnnounceEnabled=true`. The direct LAN dial is failing, most plausibly macOS
+Local Network Privacy blocking Syncthing, or the PC firewall on `:22000`. Traffic is
+end-to-end encrypted so this is not a disclosure, but the fallback path currently takes a
+third-party detour instead of the ~6ms LAN hop. Low urgency **only because** Syncthing is
+demoted to fallback (D5); it must be fixed before Syncthing is ever relied on as primary.
 
 **Not a viable spine:** the relay `<relay-host>` was unreachable for 29 hours
 (2026-08-30 15:33 → 2026-08-31 20:54) with a full disk. It must not be on the critical
@@ -84,6 +95,18 @@ inside each machine's live memory dir. This is the layout the Mac already has.
 Because the index uses relative links, a memory's directory is irrelevant to whether it
 can be read — only whether the generated index points at it. That is what lets
 `_peer-local` be present on disk yet absent from context.
+
+**Single source of truth (mac-claude O3).** Scope is expressed in two places — the
+directory and the frontmatter — and they can disagree: a file may sit in `_shared/` while
+declaring `scope: macmini`. To remove the ambiguity:
+
+> **Frontmatter `scope:` is authoritative for loading.** The generated index filters on
+> it and on nothing else. The directory is *only* physical storage and transport
+> grouping, never a loading decision.
+
+The completeness gate (§6) additionally **lints for disagreement** between a file's
+directory and its declared scope, so drift is caught by construction rather than noticed
+later.
 
 Local memories stay at top level, outside the shared repo, matching what the Mac already
 did. D2 (local is synced but not loaded) is satisfied by a **second repo per machine**
@@ -147,8 +170,22 @@ tier 3  git bundle -> GCS bucket     (offsite backup + disaster recovery)
 ```
 
 Both machines set `receive.denyCurrentBranch = updateInstead` so pushes land
-worktree-to-worktree with no bare intermediary. Hooks always commit before pushing, so
-the dirty-worktree refusal does not arise in normal operation.
+worktree-to-worktree with no bare intermediary.
+
+**Correction (mac-claude O2).** An earlier draft claimed the dirty-worktree refusal "does
+not arise because hooks commit before pushing". That was wrong: `updateInstead` inspects
+the **receiving** worktree, not the sender's, and the receiver is dirty precisely when it
+is mid-turn writing a memory. Unfixed, this makes push fail intermittently and exactly
+when the peer is most active.
+
+Fix: a `PostToolUse` **commit-on-write** hook commits immediately after any memory-file
+write, so the worktree is essentially never dirty between operations. This also shrinks
+the `Stop`-hook window. If residual failures remain, the fallback is a bare intermediary
+both push to (GCS-hosted, keeping no local central node).
+
+**Non-fast-forward pushes** (both machines pushing at once) must `pull --rebase` and retry
+**immediately**, never defer to the 30-minute reconciler — deferring leaves a known
+divergence standing for up to half an hour.
 
 ### 4.5 Triggers
 
@@ -223,6 +260,13 @@ The design is accepted only when each of these has been **executed**, not reason
 7. Killing a session mid-turn loses no committed memory; the 30-minute reconciler
    recovers the push.
 8. A restore from the GCS bundle alone reproduces the shared set.
+   **STATUS: PASSED 2026-09-01.** Bucket verified independently from the PC
+   (4 bundles, EUROPE-WEST2). Mac-claude executed the restore: fresh download of
+   `-latest.bundle` → `git clone` into a scratch dir → **167 `.md` files, HEAD `ccdc870`**,
+   matching the live `_shared` count exactly. The DR path is real, not asserted.
+
+9. A push to a peer whose worktree is dirty mid-turn still succeeds (guards the O2 fix).
+10. A file whose directory and `scope:` disagree is caught by the lint (guards the O3 fix).
 
 ## 9. Rollout and rollback
 
