@@ -77,8 +77,12 @@ def migrate_dir(path, default_scope):
     One unreadable file must never strand the rest: a partial migration is
     worse than none, because half the estate silently disagrees with the other.
     """
+    root = Path(path)
+    if not root.is_dir():
+        # A silent zero here is indistinguishable from "nothing to do".
+        raise FileNotFoundError("migrate root does not exist: {}".format(root))
     res = {"changed": 0, "unchanged": 0, "skipped_index": 0, "errors": []}
-    for f in sorted(Path(path).glob("*.md")):
+    for f in sorted(root.glob("*.md")):
         if f.name == "MEMORY.md":
             res["skipped_index"] += 1
             continue

@@ -98,3 +98,12 @@ def test_migrate_dir_never_aborts_the_batch_on_one_bad_file(tmp_path):
     res = migrate_dir(tmp_path, "macmini")
     assert res["changed"] == 2
     assert "scope: estate" in (tmp_path / "good2.md").read_text(encoding="utf-8")
+
+
+def test_migrate_dir_raises_on_a_missing_root():
+    """A nonexistent root previously returned a clean {changed:0} - a zero that
+    is indistinguishable from 'nothing needed migrating'. Absence of work must
+    not read as success."""
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        migrate_dir("/definitely/not/a/real/path", "macmini")
