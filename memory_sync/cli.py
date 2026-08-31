@@ -80,3 +80,7 @@ def main(argv=None):
     v, checks = _regenerate(root, a.machine, a.status_file, extra)
     print(v, checks["completeness"]["detail"])
     return 0 if v == "OK" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -46,3 +46,42 @@ def test_dump_roundtrips():
     meta2, body2 = parse(out)
     assert meta2["metadata"]["scope"] == "estate"
     assert body2.strip() == body.strip()
+
+
+# Real memories carry UNQUOTED descriptions with bare "colon space" sequences,
+# which yaml.safe_load rejects. The parser must degrade, never crash: an index
+# that dies on one malformed file takes the whole memory system down with it.
+NASTY = (
+    "---\n"
+    "name: capos-v13-actuators\n"
+    "description: 868 (100/100 genuinely executing: 25 turn / 65 rotation / 9 auto)\n"
+    "metadata: \n"
+    "  scope: estate\n"
+    "  type: project\n"
+    "---\n"
+    "\n"
+    "body\n"
+)
+
+
+def test_parse_survives_unquoted_colon_in_description():
+    meta, body = parse(NASTY)
+    assert meta["name"] == "capos-v13-actuators"
+    assert meta["metadata"]["scope"] == "estate"
+    assert body.strip() == "body"
+
+
+def test_parse_recovers_the_full_description_text():
+    meta, _ = parse(NASTY)
+    assert "genuinely executing: 25 turn" in meta["description"]
+
+
+def test_scope_resolves_from_a_yaml_hostile_file():
+    meta, _ = parse(NASTY)
+    assert scope_of(meta, "winpc") == "estate"
+
+
+def test_parse_strips_wrapping_quotes_in_fallback():
+    raw = "---\nname: x\ndescription: \"has: colon\"\nmetadata:\n  scope: estate\n---\n\nb\n"
+    meta, _ = parse(raw)
+    assert meta["description"] == "has: colon"
