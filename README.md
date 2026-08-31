@@ -63,10 +63,10 @@ machine-readable verdict for a scheduler to consume.
 `index` and `sync` both regenerate the index and evaluate every gate. The verdict is the worst
 of them, and it is never rounded up:
 
-- `completeness` — every memory file on disk appears in the generated index
-- `lint` — no file disagrees with its own frontmatter
-- `placement` — no memory sits in a directory its scope does not permit
-- `transport` — which remote carried the run, or that all candidates failed
+- `completeness`: every memory file on disk appears in the generated index
+- `lint`: no file disagrees with its own frontmatter
+- `placement`: no memory sits in a directory its scope does not permit
+- `transport`: which remote carried the run, or that all candidates failed
 
 A run where the memory is intact but the network leg is down reports `DEGRADED`, not `FAIL`
 and not `PASS`. That distinction is the whole point: an operator needs to know the difference
