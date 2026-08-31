@@ -1,9 +1,7 @@
-.venv/
-MEMORY.md
 __pycache__/
-*.pyc
-.pytest_cache/
+*.py[cod]
 *.egg-info/
+.pytest_cache/
 build/
 dist/
 
