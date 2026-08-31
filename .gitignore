@@ -6,3 +6,32 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+
+# ===== added by estate-push (safe defaults) =====
+.env
+.env.local
+.env.*.local
+.env.production
+.envrc
+*.pem
+*.key
+*.p12
+*.keystore
+node_modules/
+.venv/
+venv/
+.venv-*/
+__pycache__/
+target/
+dist/
+build/
+.next/
+out/
+*.onnx
+*.gguf
+*.mp4
+*.mov
+*.tgz
+.DS_Store
+*.log
+# ================================================
