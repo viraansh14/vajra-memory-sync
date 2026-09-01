@@ -1,3 +1,8 @@
+> **This project has moved.** It now ships as the `memory/` component of
+> **[vajra-harness](https://github.com/viraansh14/vajra-harness)**, alongside the
+> coordination bus it was always meant to run beside. This repository is archived
+> and read-only. Development continues there.
+
 # memory-sync
 
 Shared, self-auditing memory for two Claude Code agents running on different machines.
