@@ -6,9 +6,9 @@
 # ASCII-only: PS 5.1 parses BOM-less files as ANSI and curly quotes break strings.
 $ErrorActionPreference = "SilentlyContinue"
 
-$canon = "C:\Users\<user>\.claude\projects\C--WINDOWS-system32\memory"
-$py    = "C:\Users\<user>\vajra-memory-sync\.venv\Scripts\python.exe"
-$stat  = "C:\Users\<user>\.local\memory-sync\memory-sync.json"
+$canon = "$env:USERPROFILE\.claude\projects\C--WINDOWS-system32\memory"
+$py    = "$env:USERPROFILE\vajra-memory-sync\.venv\Scripts\python.exe"
+$stat  = "$env:USERPROFILE\.local\memory-sync\memory-sync.json"
 
 foreach ($r in @("_shared", "_local")) {
     $repo = Join-Path $canon $r

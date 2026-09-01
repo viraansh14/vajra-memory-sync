@@ -7,9 +7,9 @@
 # ASCII-only on purpose.
 $ErrorActionPreference = "SilentlyContinue"
 
-$canon = "C:\Users\<user>\.claude\projects\C--WINDOWS-system32\memory"
-$py    = "C:\Users\<user>\vajra-memory-sync\.venv\Scripts\python.exe"
-$stat  = "C:\Users\<user>\.local\memory-sync\memory-sync.json"
+$canon = "$env:USERPROFILE\.claude\projects\C--WINDOWS-system32\memory"
+$py    = "$env:USERPROFILE\vajra-memory-sync\.venv\Scripts\python.exe"
+$stat  = "$env:USERPROFILE\.local\memory-sync\memory-sync.json"
 
 if (Test-Path $py) {
     $job = Start-Job -ScriptBlock {

@@ -11,7 +11,7 @@
 # ASCII-only on purpose.
 $ErrorActionPreference = "SilentlyContinue"
 
-$canon = "C:\Users\<user>\.claude\projects\C--WINDOWS-system32\memory"
+$canon = "$env:USERPROFILE\.claude\projects\C--WINDOWS-system32\memory"
 
 foreach ($r in @("_shared", "_local")) {
     $repo = Join-Path $canon $r

@@ -867,7 +867,7 @@ ls -d /c/Users/<user>/.claude/projects/*/memory.bak-* | wc -l   # expect 4
 
 ```bash
 CANON=/c/Users/<user>/.claude/projects/C--WINDOWS-system32/memory
-git clone ssh://viraansh@<peer-lan-ip>/Users/<user>/.claude/projects/-Users-viraansh/memory/_shared "$CANON/_shared"
+git clone ssh://<user>@<peer-lan-ip>/Users/<user>/.claude/projects/-Users-<user>/memory/_shared "$CANON/_shared"
 ls "$CANON/_shared"/*.md | wc -l    # expect 167
 ```
 
@@ -1140,7 +1140,7 @@ Mac steps, in order: clone this tooling repo; create venv and `pip install -r re
 ```bash
 # PC pulls the Mac's _local into _peer-local
 CANON=/c/Users/<user>/.claude/projects/C--WINDOWS-system32/memory
-git clone ssh://viraansh@<peer-lan-ip>/Users/<user>/.claude/projects/-Users-viraansh/memory/_local "$CANON/_peer-local"
+git clone ssh://<user>@<peer-lan-ip>/Users/<user>/.claude/projects/-Users-<user>/memory/_local "$CANON/_peer-local"
 ls "$CANON/_peer-local"/*.md | wc -l   # expect 24
 ```
 

@@ -14,12 +14,12 @@
 # ASCII-only on purpose.
 $ErrorActionPreference = "SilentlyContinue"
 
-$canon  = "C:\Users\<user>\.claude\projects\C--WINDOWS-system32\memory"
-$py     = "C:\Users\<user>\vajra-memory-sync\.venv\Scripts\python.exe"
-$toast  = "C:\Users\<user>\vajra-memory-sync\scripts\toast.ps1"
-$stat   = "C:\Users\<user>\.local\memory-sync\memory-sync.json"
-$log    = "C:\Users\<user>\.local\memory-sync\memory-sync.log"
-$prevF  = "C:\Users\<user>\.local\memory-sync\memory-sync.prev"
+$canon  = "$env:USERPROFILE\.claude\projects\C--WINDOWS-system32\memory"
+$py     = "$env:USERPROFILE\vajra-memory-sync\.venv\Scripts\python.exe"
+$toast  = "$env:USERPROFILE\vajra-memory-sync\scripts\toast.ps1"
+$stat   = "$env:USERPROFILE\.local\memory-sync\memory-sync.json"
+$log    = "$env:USERPROFILE\.local\memory-sync\memory-sync.log"
+$prevF  = "$env:USERPROFILE\.local\memory-sync\memory-sync.prev"
 $started = Get-Date
 $stamp   = $started.ToString("yyyy-MM-dd HH:mm:ss")
 

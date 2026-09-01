@@ -13,13 +13,13 @@ machine is invisible to the other until a human repeats it.
 
 Claude Code keys auto-memory by **working directory**, so the two stores can never align
 on their own: the PC's live store is `~/.claude/projects/C--WINDOWS-system32/memory/`,
-the Mac's is `~/.claude/projects/-Users-viraansh/memory/`. Different keys, different
+the Mac's is `~/.claude/projects/-Users-<user>/memory/`. Different keys, different
 contents, no shared history. Any design must work inside that constraint rather than
 fight it.
 
 ## 2. Current state (measured 2026-09-01 01:37-02:05 IST)
 
-**Mac** — `~/.claude/projects/-Users-viraansh/memory/`:
+**Mac** — `~/.claude/projects/-Users-<user>/memory/`:
 
 | Location | Files | Notes |
 | --- | ---: | --- |
@@ -47,7 +47,7 @@ dotfiles folders, which had been stalled for the same reason.
 
 **Known transport defect:** the live Syncthing connection is
 `relay://64.235.45.16:443` — a *public Syncthing relay* — despite both machines sitting
-on `192.168.0.0/24` with the PC's LAN address statically configured, discovery succeeding
+on `<your-lan>/24` with the PC's LAN address statically configured, discovery succeeding
 and `localAnnounceEnabled=true`. The direct LAN dial is failing, most plausibly macOS
 Local Network Privacy blocking Syncthing, or the PC firewall on `:22000`. Traffic is
 end-to-end encrypted so this is not a disclosure, but the fallback path currently takes a
